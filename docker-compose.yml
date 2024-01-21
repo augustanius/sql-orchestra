@@ -1,0 +1,40 @@
+version: "3"
+services:
+  ### Postgres #############################################
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=${DB_USERNAME}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - PROJECT_DB=${DB_DATABASE}
+      - TZ=GMT
+      - PGTZ=GMT
+    ports:
+      - "5432:5432"
+    volumes:
+      - ${DATA_PATH_HOST}/postgres:/var/lib/postgresql/data
+      - ./init-data.sh:/docker-entrypoint-initdb.d/init-data.sh
+
+  ### Liquibase #############################################
+  liquibase:
+    image: liquibase/liquibase
+    depends_on:
+      - postgres
+    environment:
+      - LIQUIBASE_DRIVER=org.postgresql.Driver
+      - LIQUIBASE_COMMAND_CHANGELOG_FILE=changelog.xml
+      - LIQUIBASE_COMMAND_USERNAME=${DB_USERNAME}
+      - LIQUIBASE_COMMAND_PASSWORD=${DB_PASSWORD}
+      - LIQUIBASE_COMMAND_URL=jdbc:postgresql://postgres:5432/${DB_DATABASE}
+      - LIQUIBASE_COMMAND_LABELS=${LABELS}
+    volumes:
+      - ./scripts/changelog.xml:/liquibase/changelog.xml
+      - ./scripts/migrations:/liquibase/migrations
+      - ./scripts/seeders:/liquibase/seeders
+      - ./scripts/logs:/liquibase/changelog
+
+volumes:
+  postgres:
+    driver: local
+  liquibase:
+    driver: local
